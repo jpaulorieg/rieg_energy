@@ -1,0 +1,40 @@
+import_history:
+  name: Import history
+  description: Import historical daily energy statistics from PostgreSQL.
+  fields:
+    entry_id:
+      required: false
+      selector:
+        text:
+    force_full:
+      required: false
+      default: false
+      selector:
+        boolean:
+
+rebuild_statistics:
+  name: Rebuild statistics
+  description: Clear imported statistics and recreate them from PostgreSQL history.
+  fields:
+    entry_id:
+      required: false
+      selector:
+        text:
+
+sync_now:
+  name: Sync now
+  description: Force an immediate data refresh.
+  fields:
+    entry_id:
+      required: false
+      selector:
+        text:
+
+clear_cache:
+  name: Clear cache
+  description: Clear in-memory cache and runtime metrics.
+  fields:
+    entry_id:
+      required: false
+      selector:
+        text:

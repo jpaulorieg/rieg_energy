@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Rieg Energy",
+        "description": "Enter the PostgreSQL connection settings.",
+        "data": {
+          "host": "Hostname",
+          "port": "Port",
+          "database": "Database",
+          "username": "Username",
+          "password": "Password",
+          "ssl": "Use SSL",
+          "update_interval": "Update interval (seconds)",
+          "timezone": "Timezone"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to PostgreSQL.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This PostgreSQL source is already configured."
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "domain": "rieg_energy",
+  "name": "Rieg Energy",
+  "codeowners": [
+    "@rieg"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "recorder"
+  ],
+  "documentation": "https://github.com/rieg/rieg_energy",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/rieg/rieg_energy/issues",
+  "loggers": [
+    "custom_components.rieg_energy"
+  ],
+  "quality_scale": "gold",
+  "requirements": [
+    "psycopg[binary]>=3.2"
+  ],
+  "version": "0.4.2"
+}

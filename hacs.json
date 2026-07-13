@@ -1,0 +1,9 @@
+{
+  "name": "Rieg Energy",
+  "content_in_root": false,
+  "domains": [
+    "rieg_energy"
+  ],
+  "homeassistant": "2025.1.4",
+  "render_readme": true
+}

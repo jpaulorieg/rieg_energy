@@ -1,0 +1,33 @@
+{
+  "entity": {
+    "sensor": {
+      "solar_power": "mdi:solar-power",
+      "energy_today": "mdi:solar-panel-large",
+      "energy_week": "mdi:calendar-week",
+      "energy_month": "mdi:calendar-month",
+      "energy_year": "mdi:calendar-range",
+      "energy_total": "mdi:counter",
+      "forecast_generation": "mdi:chart-line",
+      "solar_radiation": "mdi:white-balance-sunny",
+      "cloud_cover": "mdi:weather-cloudy",
+      "sunshine_time": "mdi:timer-sand",
+      "dni": "mdi:weather-sunny-alert",
+      "ghi": "mdi:weather-sunny",
+      "dif": "mdi:weather-partly-cloudy",
+      "last_bill": "mdi:cash",
+      "reference_month": "mdi:file-document",
+      "bill_due_date": "mdi:calendar-clock",
+      "average_price": "mdi:currency-usd",
+      "energy_te": "mdi:transmission-tower",
+      "energy_tusd": "mdi:lightning-bolt",
+      "tariff_flag": "mdi:flag",
+      "injected_value": "mdi:cash-plus",
+      "consumed_value": "mdi:cash-minus",
+      "energy_consumed": "mdi:transmission-tower-export",
+      "energy_injected": "mdi:transmission-tower-import",
+      "previous_reading": "mdi:gauge-empty",
+      "current_reading": "mdi:gauge-full",
+      "reading_difference": "mdi:chart-bell-curve"
+    }
+  }
+}

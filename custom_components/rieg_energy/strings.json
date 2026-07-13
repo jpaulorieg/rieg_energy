@@ -1,0 +1,112 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Rieg Energy",
+        "description": "Enter the PostgreSQL connection settings.",
+        "data": {
+          "host": "Hostname",
+          "port": "Port",
+          "database": "Database",
+          "username": "Username",
+          "password": "Password",
+          "ssl": "Use SSL",
+          "update_interval": "Update interval (seconds)",
+          "timezone": "Timezone"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to PostgreSQL.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This PostgreSQL source is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "solar_power": {
+        "name": "Solar power"
+      },
+      "energy_today": {
+        "name": "Energy today"
+      },
+      "energy_week": {
+        "name": "Energy week"
+      },
+      "energy_month": {
+        "name": "Energy month"
+      },
+      "energy_year": {
+        "name": "Energy year"
+      },
+      "energy_total": {
+        "name": "Energy total"
+      },
+      "forecast_generation": {
+        "name": "Forecast generation"
+      },
+      "solar_radiation": {
+        "name": "Solar radiation"
+      },
+      "cloud_cover": {
+        "name": "Cloud cover"
+      },
+      "sunshine_time": {
+        "name": "Sunshine time"
+      },
+      "dni": {
+        "name": "DNI"
+      },
+      "ghi": {
+        "name": "GHI"
+      },
+      "dif": {
+        "name": "DIF"
+      },
+      "last_bill": {
+        "name": "Last bill"
+      },
+      "reference_month": {
+        "name": "Reference month"
+      },
+      "bill_due_date": {
+        "name": "Bill due date"
+      },
+      "average_price": {
+        "name": "Average price"
+      },
+      "energy_te": {
+        "name": "Energy TE"
+      },
+      "energy_tusd": {
+        "name": "Energy TUSD"
+      },
+      "tariff_flag": {
+        "name": "Tariff flag"
+      },
+      "injected_value": {
+        "name": "Injected value"
+      },
+      "consumed_value": {
+        "name": "Consumed value"
+      },
+      "energy_consumed": {
+        "name": "Energy consumed"
+      },
+      "energy_injected": {
+        "name": "Energy injected"
+      },
+      "previous_reading": {
+        "name": "Previous reading"
+      },
+      "current_reading": {
+        "name": "Current reading"
+      },
+      "reading_difference": {
+        "name": "Reading difference"
+      }
+    }
+  }
+}
