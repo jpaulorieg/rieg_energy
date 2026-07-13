@@ -289,8 +289,13 @@ class RiegEnergyApiClient:
                     quantitty_producer::double precision AS solar_power_w
                 FROM hourly_producer
                 WHERE date_producer = CAST((CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo') AS DATE)
-                AND hour_producer <= EXTRACT(HOUR   FROM CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
-                and minute_producer <= EXTRACT(MINUTE FROM CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
+                AND (
+                    hour_producer < EXTRACT(HOUR FROM CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
+                    OR (
+                        hour_producer = EXTRACT(HOUR FROM CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
+                        AND minute_producer <= EXTRACT(MINUTE FROM CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
+                    )
+                )
                 ORDER BY complete_hour DESC, minute_producer DESC
                 LIMIT 4
             )AS dataa
