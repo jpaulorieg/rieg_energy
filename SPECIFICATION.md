@@ -103,6 +103,8 @@ Intervalo de atualização
 
 Timezone
 
+Unidade consumidora (selecionada da coluna `unidade_consumidora` da tabela `fatura`)
+
 Após salvar, validar a conexão.
 
 ---

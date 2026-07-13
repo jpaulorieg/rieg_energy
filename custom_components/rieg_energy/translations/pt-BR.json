@@ -12,7 +12,8 @@
           "password": "Senha",
           "ssl": "Usar SSL",
           "update_interval": "Intervalo de atualização (segundos)",
-          "timezone": "Fuso horário"
+          "timezone": "Fuso horário",
+          "unidade_consumidora": "Unidade consumidora"
         }
       },
       "consumer_unit": {
@@ -25,6 +26,7 @@
     },
     "error": {
       "cannot_connect": "Falha ao conectar ao PostgreSQL.",
+      "invalid_consumer_unit": "A unidade_consumidora informada não foi encontrada na tabela fatura.",
       "no_consumer_units": "Nenhuma unidade_consumidora encontrada na tabela fatura.",
       "unknown": "Erro inesperado."
     },

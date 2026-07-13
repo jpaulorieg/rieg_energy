@@ -26,3 +26,4 @@
 - SSL enabled or disabled
 - Update interval in seconds
 - Timezone
+- Consumer unit (`unidade_consumidora`) selected from table `fatura`
