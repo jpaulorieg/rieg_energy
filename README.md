@@ -137,3 +137,4 @@ Coverage target:
 - It does not use the Growatt API.
 - It does not write directly to the Home Assistant database.
 - Some weather and billing mappings use column aliases because the specification does not define every physical column name for those tables.
+- Weather mapping for `meteoblue.solar_weather` supports `sunshine_time` (`time` to minutes), `dni_total`, `ghi_total`, `dif_total`, `totalcloudcover_mean`, and `directshortwaveradiation_total` (plus backward-compatible aliases).

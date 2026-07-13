@@ -23,6 +23,17 @@ Some tables in the specification define expected sensors but not every physical 
 
 If your schema diverges from those aliases, update the mappings before deployment.
 
+For `meteoblue.solar_weather`, the integration supports these column mappings out of the box:
+
+- `sensor.solar_radiation`: `directshortwaveradiation_total`, `clearskyshortwave_total`, `ghi_total` (fallback aliases also supported)
+- `sensor.cloud_cover`: `totalcloudcover_mean` (fallback to `totalcloudcover_max`/`totalcloudcover_min` and aliases)
+- `sensor.sunshine_time`: `sunshine_time` (`time` converted to minutes)
+- `sensor.dni`: `dni_total`
+- `sensor.ghi`: `ghi_total`
+- `sensor.dif`: `dif_total`
+
+`sensor.forecast_generation` remains alias-based because this value is not explicitly defined in the `solar_weather` DDL above.
+
 ## Performance
 
 - Connections are pooled.

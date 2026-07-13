@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from datetime import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from custom_components.rieg_energy.api import RiegEnergyApiClient
@@ -75,3 +76,36 @@ async def test_async_execute_uses_psycopg_async_connection() -> None:
 
     assert rows == [{"value": 1}]
     connect_mock.assert_awaited_once()
+
+
+def test_normalize_weather_maps_meteoblue_ddl_columns() -> None:
+    """Test weather normalization using meteoblue.solar_weather column names."""
+    client = RiegEnergyApiClient(
+        hass=None,  # type: ignore[arg-type]
+        host="localhost",
+        port=5432,
+        database="db",
+        username="user",
+        password="secret",
+        ssl=False,
+        timezone="America/Sao_Paulo",
+        update_interval=300,
+    )
+
+    row = {
+        "sunshine_time": time(5, 30),
+        "totalcloudcover_mean": 42.4,
+        "dni_total": 610.2,
+        "ghi_total": 520.8,
+        "dif_total": 98.7,
+        "directshortwaveradiation_total": 501.0,
+    }
+
+    weather = client._normalize_weather(row)
+
+    assert weather["sunshine_time"] == 330.0
+    assert weather["cloud_cover"] == 42.4
+    assert weather["dni"] == 610.2
+    assert weather["ghi"] == 520.8
+    assert weather["dif"] == 98.7
+    assert weather["solar_radiation"] == 501.0

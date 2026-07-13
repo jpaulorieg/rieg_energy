@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 import logging
 from statistics import fmean
 from time import perf_counter
@@ -417,14 +417,25 @@ class RiegEnergyApiClient:
                 "radiacao_solar",
                 "radiation",
                 "global_radiation",
+                "directshortwaveradiation_total",
+                "clearskyshortwave_total",
+                "ghi_total",
             ),
-            "cloud_cover": self._find_first_float(row, "cloud_cover", "cobertura_nuvens", "clouds"),
-            "sunshine_time": self._find_first_float(
-                row, "sunshine_time", "sunshine", "sunshine_duration"
+            "cloud_cover": self._find_first_float(
+                row,
+                "cloud_cover",
+                "cobertura_nuvens",
+                "clouds",
+                "totalcloudcover_mean",
+                "totalcloudcover_max",
+                "totalcloudcover_min",
             ),
-            "dni": self._find_first_float(row, "dni"),
-            "ghi": self._find_first_float(row, "ghi"),
-            "dif": self._find_first_float(row, "dif"),
+            "sunshine_time": self._to_minutes(
+                self._find_first_value(row, "sunshine_time", "sunshine", "sunshine_duration")
+            ),
+            "dni": self._find_first_float(row, "dni", "dni_total"),
+            "ghi": self._find_first_float(row, "ghi", "ghi_total"),
+            "dif": self._find_first_float(row, "dif", "dif_total"),
         }
 
     def _normalize_bill(self, row: Mapping[str, Any]) -> dict[str, Any]:
@@ -494,3 +505,28 @@ class RiegEnergyApiClient:
             return round(float(value), 3)
         except (TypeError, ValueError):
             return None
+
+    def _to_minutes(self, value: Any) -> float | None:
+        """Convert supported time-like values into minutes."""
+        if value is None:
+            return None
+
+        if isinstance(value, timedelta):
+            return round(value.total_seconds() / 60, 3)
+
+        if isinstance(value, datetime):
+            value = value.time()
+
+        if isinstance(value, time):
+            seconds = value.hour * 3600 + value.minute * 60 + value.second
+            return round(seconds / 60, 3)
+
+        if isinstance(value, str):
+            try:
+                parsed = time.fromisoformat(value)
+            except ValueError:
+                return self._to_float(value)
+            seconds = parsed.hour * 3600 + parsed.minute * 60 + parsed.second
+            return round(seconds / 60, 3)
+
+        return self._to_float(value)
