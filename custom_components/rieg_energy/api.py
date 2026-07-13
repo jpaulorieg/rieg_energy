@@ -317,52 +317,92 @@ class RiegEnergyApiClient:
             cache_key="solar_weather_latest",
         )
         bill_cache_suffix = self.consumer_unit or "all"
-        bill_rows = await self.async_execute(
+        if self.consumer_unit:
+            bill_query = """
+                SELECT *
+                FROM fatura
+                WHERE unidade_consumidora = %s
+                ORDER BY 1 DESC
+                LIMIT 1
             """
-            SELECT *
-            FROM fatura
-            WHERE (%s IS NULL OR unidade_consumidora = %s)
-            ORDER BY 1 DESC
-            LIMIT 1
-            """,
-            self.consumer_unit,
-            self.consumer_unit,
+            bill_args: tuple[Any, ...] = (self.consumer_unit,)
+            bill_item_query = """
+                WITH latest_bill AS (
+                    SELECT id
+                    FROM fatura
+                    WHERE unidade_consumidora = %s
+                    ORDER BY id DESC
+                    LIMIT 1
+                )
+                SELECT fi.*
+                FROM latest_bill lb
+                JOIN fatura_item fi ON fi.id_fatura = lb.id
+                ORDER BY fi.id DESC
+            """
+            bill_item_args: tuple[Any, ...] = (self.consumer_unit,)
+            bill_reading_query = """
+                WITH latest_bill AS (
+                    SELECT id
+                    FROM fatura
+                    WHERE unidade_consumidora = %s
+                    ORDER BY id DESC
+                    LIMIT 1
+                )
+                SELECT fl.*
+                FROM latest_bill lb
+                JOIN fatura_leitura fl ON fl.id_fatura = lb.id
+                ORDER BY fl.id DESC
+            """
+            bill_reading_args: tuple[Any, ...] = (self.consumer_unit,)
+        else:
+            # Backward compatibility for old entries created before consumer_unit became mandatory.
+            bill_query = """
+                SELECT *
+                FROM fatura
+                ORDER BY 1 DESC
+                LIMIT 1
+            """
+            bill_args = ()
+            bill_item_query = """
+                WITH latest_bill AS (
+                    SELECT id
+                    FROM fatura
+                    ORDER BY id DESC
+                    LIMIT 1
+                )
+                SELECT fi.*
+                FROM latest_bill lb
+                JOIN fatura_item fi ON fi.id_fatura = lb.id
+                ORDER BY fi.id DESC
+            """
+            bill_item_args = ()
+            bill_reading_query = """
+                WITH latest_bill AS (
+                    SELECT id
+                    FROM fatura
+                    ORDER BY id DESC
+                    LIMIT 1
+                )
+                SELECT fl.*
+                FROM latest_bill lb
+                JOIN fatura_leitura fl ON fl.id_fatura = lb.id
+                ORDER BY fl.id DESC
+            """
+            bill_reading_args = ()
+
+        bill_rows = await self.async_execute(
+            bill_query,
+            *bill_args,
             cache_key=f"bill_latest_{bill_cache_suffix}",
         )
         bill_item_rows = await self.async_execute(
-            """
-            WITH latest_bill AS (
-                SELECT id
-                FROM fatura
-                WHERE (%s IS NULL OR unidade_consumidora = %s)
-                ORDER BY id DESC
-                LIMIT 1
-            )
-            SELECT fi.*
-            FROM latest_bill lb
-            JOIN fatura_item fi ON fi.id_fatura = lb.id
-            ORDER BY fi.id DESC
-            """,
-            self.consumer_unit,
-            self.consumer_unit,
+            bill_item_query,
+            *bill_item_args,
             cache_key=f"bill_items_latest_{bill_cache_suffix}",
         )
         bill_reading_rows = await self.async_execute(
-            """
-            WITH latest_bill AS (
-                SELECT id
-                FROM fatura
-                WHERE (%s IS NULL OR unidade_consumidora = %s)
-                ORDER BY id DESC
-                LIMIT 1
-            )
-            SELECT fl.*
-            FROM latest_bill lb
-            JOIN fatura_leitura fl ON fl.id_fatura = lb.id
-            ORDER BY fl.id DESC
-            """,
-            self.consumer_unit,
-            self.consumer_unit,
+            bill_reading_query,
+            *bill_reading_args,
             cache_key=f"bill_readings_latest_{bill_cache_suffix}",
         )
 
