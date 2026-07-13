@@ -21,6 +21,7 @@ from homeassistant.exceptions import ConfigEntryError
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_CONSUMER_UNIT,
     CONF_DATABASE,
     CONF_SSL,
     CONF_TIMEZONE,
@@ -93,6 +94,7 @@ class RiegEnergyApiClient:
         ssl: bool,
         timezone: str,
         update_interval: int,
+        consumer_unit: str | None = None,
     ) -> None:
         self.hass = hass
         self.host = host
@@ -103,6 +105,7 @@ class RiegEnergyApiClient:
         self.ssl = ssl
         self.timezone = timezone or DEFAULT_TIMEZONE
         self.update_interval = update_interval
+        self.consumer_unit = consumer_unit
         self._connection: AsyncConnection | None = None
         self._cache: dict[str, tuple[datetime, Any]] = {}
         self._timings: list[float] = []
@@ -124,6 +127,7 @@ class RiegEnergyApiClient:
             ssl=data.get(CONF_SSL, DEFAULT_SSL),
             timezone=data.get(CONF_TIMEZONE, DEFAULT_TIMEZONE),
             update_interval=data.get(CONF_UPDATE_INTERVAL, 300),
+            consumer_unit=data.get(CONF_CONSUMER_UNIT),
         )
 
     @staticmethod
@@ -147,6 +151,43 @@ class RiegEnergyApiClient:
             raise CannotConnect("postgres_error") from err
         except TimeoutError as err:
             raise CannotConnect("timeout") from err
+        finally:
+            await client.async_close()
+
+    @staticmethod
+    async def async_list_consumer_units(
+        hass: HomeAssistant,
+        data: Mapping[str, Any],
+    ) -> list[str]:
+        """Return available distinct consumer units from fatura."""
+        client = RiegEnergyApiClient(
+            hass,
+            host=data[CONF_HOST],
+            port=data.get(CONF_PORT, DEFAULT_PORT),
+            database=data[CONF_DATABASE],
+            username=data[CONF_USERNAME],
+            password=data[CONF_PASSWORD],
+            ssl=data.get(CONF_SSL, DEFAULT_SSL),
+            timezone=data.get(CONF_TIMEZONE, DEFAULT_TIMEZONE),
+            update_interval=data.get(CONF_UPDATE_INTERVAL, 300),
+        )
+        try:
+            rows = await client.async_execute(
+                """
+                SELECT DISTINCT unidade_consumidora
+                FROM fatura
+                WHERE unidade_consumidora IS NOT NULL
+                ORDER BY unidade_consumidora ASC
+                """,
+                cache_key=None,
+            )
+            units = [
+                str(value).strip()
+                for row in rows
+                if (value := row.get("unidade_consumidora"))
+                and str(value).strip()
+            ]
+            return units
         finally:
             await client.async_close()
 
@@ -275,32 +316,54 @@ class RiegEnergyApiClient:
             """,
             cache_key="solar_weather_latest",
         )
+        bill_cache_suffix = self.consumer_unit or "all"
         bill_rows = await self.async_execute(
             """
             SELECT *
             FROM fatura
+            WHERE (%s IS NULL OR unidade_consumidora = %s)
             ORDER BY 1 DESC
             LIMIT 1
             """,
-            cache_key="bill_latest",
+            self.consumer_unit,
+            self.consumer_unit,
+            cache_key=f"bill_latest_{bill_cache_suffix}",
         )
         bill_item_rows = await self.async_execute(
             """
-            SELECT *
-            FROM fatura_item
-            ORDER BY 1 DESC
-            LIMIT 1
+            WITH latest_bill AS (
+                SELECT id
+                FROM fatura
+                WHERE (%s IS NULL OR unidade_consumidora = %s)
+                ORDER BY id DESC
+                LIMIT 1
+            )
+            SELECT fi.*
+            FROM latest_bill lb
+            JOIN fatura_item fi ON fi.id_fatura = lb.id
+            ORDER BY fi.id DESC
             """,
-            cache_key="bill_item_latest",
+            self.consumer_unit,
+            self.consumer_unit,
+            cache_key=f"bill_items_latest_{bill_cache_suffix}",
         )
         bill_reading_rows = await self.async_execute(
             """
-            SELECT *
-            FROM fatura_leitura
-            ORDER BY 1 DESC
-            LIMIT 1
+            WITH latest_bill AS (
+                SELECT id
+                FROM fatura
+                WHERE (%s IS NULL OR unidade_consumidora = %s)
+                ORDER BY id DESC
+                LIMIT 1
+            )
+            SELECT fl.*
+            FROM latest_bill lb
+            JOIN fatura_leitura fl ON fl.id_fatura = lb.id
+            ORDER BY fl.id DESC
             """,
-            cache_key="bill_reading_latest",
+            self.consumer_unit,
+            self.consumer_unit,
+            cache_key=f"bill_readings_latest_{bill_cache_suffix}",
         )
 
         monthly = [self._normalize_monthly_row(row) for row in monthly_rows]
@@ -324,14 +387,8 @@ class RiegEnergyApiClient:
             energy_total_kwh=energy_total,
             weather=self._normalize_weather(weather_rows[0]) if weather_rows else {},
             bill=self._normalize_bill(bill_rows[0]) if bill_rows else {},
-            bill_items=(
-                self._normalize_bill_item(bill_item_rows[0]) if bill_item_rows else {}
-            ),
-            bill_readings=(
-                self._normalize_bill_reading(bill_reading_rows[0])
-                if bill_reading_rows
-                else {}
-            ),
+            bill_items=self._normalize_bill_items(bill_item_rows, bill_rows[0] if bill_rows else None),
+            bill_readings=self._normalize_bill_readings(bill_reading_rows),
             imported_history_rows=len(monthly),
         )
 
@@ -440,41 +497,133 @@ class RiegEnergyApiClient:
 
     def _normalize_bill(self, row: Mapping[str, Any]) -> dict[str, Any]:
         return {
-            "last_bill": self._find_first_float(row, "valor", "last_bill", "total", "valor_total"),
+            "last_bill": self._find_first_float(
+                row, "total_pagar", "valor", "last_bill", "total", "valor_total"
+            ),
             "reference_month": self._find_first_value(
-                row, "mes_referencia", "reference_month", "competencia"
+                row, "referencia", "mes_referencia", "reference_month", "competencia"
             ),
-            "bill_due_date": self._find_first_value(row, "data_vencimento", "due_date", "bill_due_date"),
+            "bill_due_date": self._find_first_value(
+                row, "vencimento", "data_vencimento", "due_date", "bill_due_date"
+            ),
         }
 
-    def _normalize_bill_item(self, row: Mapping[str, Any]) -> dict[str, Any]:
+    def _normalize_bill_items(
+        self,
+        rows: list[Mapping[str, Any]],
+        bill_row: Mapping[str, Any] | None,
+    ) -> dict[str, Any]:
+        if not rows:
+            return {}
+
+        # Weighted average price from the latest bill items.
+        quantity_total = 0.0
+        value_total = 0.0
+        energy_te = 0.0
+        energy_tusd = 0.0
+        injected_value = 0.0
+        consumed_value = 0.0
+        has_energy_te = False
+        has_energy_tusd = False
+        has_injected = False
+        has_consumed = False
+
+        for row in rows:
+            description = str(self._find_first_value(row, "descricao_item") or "").lower()
+            quantity = self._find_first_float(row, "quantidade")
+            value = self._find_first_float(row, "valor")
+
+            if quantity is not None and value is not None and quantity > 0:
+                quantity_total += quantity
+                value_total += value
+
+            if quantity is not None and "tusd" in description:
+                energy_tusd += quantity
+                has_energy_tusd = True
+            elif quantity is not None and " te" in f" {description} ":
+                energy_te += quantity
+                has_energy_te = True
+
+            if value is not None and ("injet" in description or "compens" in description):
+                injected_value += abs(value)
+                has_injected = True
+            elif value is not None and "consum" in description:
+                consumed_value += value
+                has_consumed = True
+
+        average_price = round(value_total / quantity_total, 3) if quantity_total > 0 else None
+        tariff_flag = self._find_first_value(
+            rows[0],
+            "bandeira_tarifaria",
+            "tariff_flag",
+            "flag",
+        )
+        if tariff_flag is None and bill_row is not None:
+            tariff_flag = self._find_first_value(
+                bill_row,
+                "modalidade_tarifaria",
+                "classificacao",
+            )
+
         return {
-            "average_price": self._find_first_float(
-                row, "preco_medio_kwh", "average_price", "valor_medio_kwh"
-            ),
-            "energy_te": self._find_first_float(row, "energia_te", "energy_te", "te"),
-            "energy_tusd": self._find_first_float(row, "energia_tusd", "energy_tusd", "tusd"),
-            "tariff_flag": self._find_first_value(row, "bandeira_tarifaria", "tariff_flag", "flag"),
-            "injected_value": self._find_first_float(
-                row, "valor_injetado", "injected_value", "credito_injetado"
-            ),
-            "consumed_value": self._find_first_float(
-                row, "valor_consumido", "consumed_value", "custo_consumido"
-            ),
+            "average_price": average_price
+            if average_price is not None
+            else self._find_first_float(rows[0], "preco_medio_kwh", "average_price", "valor_medio_kwh"),
+            "energy_te": round(energy_te, 3)
+            if has_energy_te
+            else self._find_first_float(rows[0], "energia_te", "energy_te", "te"),
+            "energy_tusd": round(energy_tusd, 3)
+            if has_energy_tusd
+            else self._find_first_float(rows[0], "energia_tusd", "energy_tusd", "tusd"),
+            "tariff_flag": tariff_flag,
+            "injected_value": round(injected_value, 3)
+            if has_injected
+            else self._find_first_float(rows[0], "valor_injetado", "injected_value", "credito_injetado"),
+            "consumed_value": round(consumed_value, 3)
+            if has_consumed
+            else self._find_first_float(rows[0], "valor_consumido", "consumed_value", "custo_consumido"),
         }
 
-    def _normalize_bill_reading(self, row: Mapping[str, Any]) -> dict[str, Any]:
-        previous_reading = self._find_first_float(row, "leitura_anterior", "previous_reading")
-        current_reading = self._find_first_float(row, "leitura_atual", "current_reading")
+    def _normalize_bill_readings(self, rows: list[Mapping[str, Any]]) -> dict[str, Any]:
+        if not rows:
+            return {}
+
+        latest_row = rows[0]
+        previous_reading = self._find_first_float(latest_row, "leitura_anterior", "previous_reading")
+        current_reading = self._find_first_float(latest_row, "leitura_atual", "current_reading")
         diff = None
         if previous_reading is not None and current_reading is not None:
             diff = round(current_reading - previous_reading, 3)
+
+        energy_consumed = 0.0
+        energy_injected = 0.0
+        has_consumed = False
+        has_injected = False
+
+        for row in rows:
+            total_apurado = self._find_first_float(row, "total_apurado")
+            grandeza = str(self._find_first_value(row, "grandeza") or "").lower()
+
+            if total_apurado is None:
+                continue
+
+            if "injet" in grandeza or total_apurado < 0:
+                energy_injected += abs(total_apurado)
+                has_injected = True
+            else:
+                energy_consumed += total_apurado
+                has_consumed = True
+
         return {
-            "energy_consumed": self._find_first_float(
-                row, "energia_consumida", "energy_consumed", "consumed_energy"
+            "energy_consumed": round(energy_consumed, 3)
+            if has_consumed
+            else self._find_first_float(
+                latest_row, "energia_consumida", "energy_consumed", "consumed_energy"
             ),
-            "energy_injected": self._find_first_float(
-                row, "energia_injetada", "energy_injected", "injected_energy"
+            "energy_injected": round(energy_injected, 3)
+            if has_injected
+            else self._find_first_float(
+                latest_row, "energia_injetada", "energy_injected", "injected_energy"
             ),
             "previous_reading": previous_reading,
             "current_reading": current_reading,

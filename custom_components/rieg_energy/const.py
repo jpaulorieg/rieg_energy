@@ -11,6 +11,7 @@ VERSION: Final = "0.4.1"
 ATTRIBUTION: Final = "Data provided by PostgreSQL"
 
 CONF_DATABASE: Final = "database"
+CONF_CONSUMER_UNIT: Final = "unidade_consumidora"
 CONF_SSL: Final = "ssl"
 CONF_TIMEZONE: Final = "timezone"
 CONF_UPDATE_INTERVAL: Final = "update_interval"

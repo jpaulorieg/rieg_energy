@@ -14,10 +14,18 @@
           "update_interval": "Intervalo de atualização (segundos)",
           "timezone": "Fuso horário"
         }
+      },
+      "consumer_unit": {
+        "title": "Selecionar Unidade Consumidora",
+        "description": "Escolha a unidade_consumidora que este dispositivo deve acompanhar.",
+        "data": {
+          "unidade_consumidora": "Unidade consumidora"
+        }
       }
     },
     "error": {
       "cannot_connect": "Falha ao conectar ao PostgreSQL.",
+      "no_consumer_units": "Nenhuma unidade_consumidora encontrada na tabela fatura.",
       "unknown": "Erro inesperado."
     },
     "abort": {

@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
 
 from custom_components.rieg_energy.const import (
+    CONF_CONSUMER_UNIT,
     CONF_DATABASE,
     CONF_SSL,
     CONF_TIMEZONE,
@@ -37,6 +38,7 @@ def entry() -> ConfigEntry:
                 CONF_SSL: False,
                 CONF_UPDATE_INTERVAL: 300,
                 CONF_TIMEZONE: DEFAULT_TIMEZONE,
+                CONF_CONSUMER_UNIT: "UC-001",
             },
         ),
     )

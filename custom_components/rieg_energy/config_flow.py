@@ -11,6 +11,7 @@ from homeassistant.data_entry_flow import FlowResult
 
 from .api import CannotConnect, RiegEnergyApiClient
 from .const import (
+    CONF_CONSUMER_UNIT,
     CONF_DATABASE,
     CONF_SSL,
     CONF_TIMEZONE,
@@ -30,6 +31,11 @@ class RiegEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    def __init__(self) -> None:
+        """Initialize config flow state."""
+        self._validated_input: dict[str, Any] | None = None
+        self._consumer_units: list[str] = []
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -37,11 +43,6 @@ class RiegEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            await self.async_set_unique_id(
-                f"{user_input[CONF_HOST]}:{user_input[CONF_PORT]}/{user_input[CONF_DATABASE]}"
-            )
-            self._abort_if_unique_id_configured()
-
             try:
                 await RiegEnergyApiClient.validate_input(self.hass, user_input)
             except CannotConnect:
@@ -49,7 +50,18 @@ class RiegEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except Exception:
                 errors["base"] = "unknown"
             else:
-                return self.async_create_entry(title="Rieg Energy", data=user_input)
+                self._validated_input = dict(user_input)
+                try:
+                    self._consumer_units = await RiegEnergyApiClient.async_list_consumer_units(
+                        self.hass, self._validated_input
+                    )
+                except Exception:
+                    errors["base"] = "unknown"
+                else:
+                    if not self._consumer_units:
+                        errors["base"] = "no_consumer_units"
+                    else:
+                        return await self.async_step_consumer_unit()
 
         schema = vol.Schema(
             {
@@ -66,3 +78,38 @@ class RiegEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+
+    async def async_step_consumer_unit(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Select the consumer unit for this integration entry."""
+        errors: dict[str, str] = {}
+        if self._validated_input is None or not self._consumer_units:
+            return await self.async_step_user()
+
+        if user_input is not None:
+            selected_consumer_unit = user_input[CONF_CONSUMER_UNIT]
+            entry_data = {
+                **self._validated_input,
+                CONF_CONSUMER_UNIT: selected_consumer_unit,
+            }
+            await self.async_set_unique_id(
+                f"{entry_data[CONF_HOST]}:{entry_data[CONF_PORT]}/{entry_data[CONF_DATABASE]}/{selected_consumer_unit}"
+            )
+            self._abort_if_unique_id_configured()
+            return self.async_create_entry(
+                title=f"Rieg Energy ({selected_consumer_unit})",
+                data=entry_data,
+            )
+
+        default_unit = self._consumer_units[0]
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_CONSUMER_UNIT, default=default_unit): vol.In(
+                    self._consumer_units
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="consumer_unit", data_schema=schema, errors=errors
+        )

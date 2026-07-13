@@ -60,6 +60,7 @@ Detailed setup:
 - SSL
 - Update interval
 - Timezone
+- Consumer unit (`unidade_consumidora`)
 
 ## Entities
 
@@ -138,3 +139,4 @@ Coverage target:
 - It does not write directly to the Home Assistant database.
 - Some weather and billing mappings use column aliases because the specification does not define every physical column name for those tables.
 - Weather mapping for `meteoblue.solar_weather` supports `sunshine_time` (`time` to minutes), `dni_total`, `ghi_total`, `dif_total`, `totalcloudcover_mean`, and `directshortwaveradiation_total` (plus backward-compatible aliases).
+- Billing and meter queries always use the most recent row from `fatura` filtered by the configured `unidade_consumidora`, and `fatura_item`/`fatura_leitura` are joined through `id_fatura` to ensure FK consistency.
