@@ -11,7 +11,6 @@
           "username": "Username",
           "password": "Password",
           "ssl": "Use SSL",
-          "update_interval": "Update interval (seconds)",
           "timezone": "Timezone",
           "unidade_consumidora": "Consumer unit"
         }

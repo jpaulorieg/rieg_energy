@@ -237,9 +237,9 @@ async def test_async_get_snapshot_filters_latest_bill_by_consumer_unit() -> None
     await client.async_get_snapshot()
 
     hourly_query = client.async_execute.await_args_list[0].args[0]
-    assert "hour_producer < EXTRACT(HOUR" in hourly_query
-    assert "hour_producer = EXTRACT(HOUR" in hourly_query
-    assert "AND minute_producer <= EXTRACT(MINUTE" in hourly_query
+    assert "ORDER BY id DESC" in hourly_query
+    assert "COALESCE" in hourly_query
+    assert "AS solar_power_w" in hourly_query
 
     bill_query = client.async_execute.await_args_list[3].args[0]
     assert "unidade_consumidora" in bill_query

@@ -58,7 +58,6 @@ Detailed setup:
 - Username
 - Password
 - SSL
-- Update interval
 - Timezone
 - Consumer unit (`unidade_consumidora`)
 

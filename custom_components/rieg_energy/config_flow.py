@@ -15,14 +15,10 @@ from .const import (
     CONF_DATABASE,
     CONF_SSL,
     CONF_TIMEZONE,
-    CONF_UPDATE_INTERVAL,
     DEFAULT_PORT,
     DEFAULT_SSL,
     DEFAULT_TIMEZONE,
-    DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
-    MAX_UPDATE_INTERVAL,
-    MIN_UPDATE_INTERVAL,
 )
 
 
@@ -89,9 +85,6 @@ class RiegEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_USERNAME): str,
                 vol.Required(CONF_PASSWORD): str,
                 vol.Required(CONF_SSL, default=DEFAULT_SSL): bool,
-                vol.Required(
-                    CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL
-                ): vol.All(vol.Coerce(int), vol.Range(min=MIN_UPDATE_INTERVAL, max=MAX_UPDATE_INTERVAL)),
                 vol.Required(CONF_TIMEZONE, default=DEFAULT_TIMEZONE): str,
                 vol.Required(CONF_CONSUMER_UNIT): str,
             }

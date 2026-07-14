@@ -271,23 +271,16 @@ class RiegEnergyApiClient:
 
         hourly_rows = await self.async_execute(
             """
-            SELECT MAX(observed_at) AS observed_at, AVG(solar_power_w) AS solar_power_w
-            FROM(
-                SELECT 
-                    complete_hour AS observed_at,
-                    quantitty_producer::double precision AS solar_power_w
-                FROM hourly_producer
-                WHERE date_producer = CAST((CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo') AS DATE)
-                AND (
-                    hour_producer < EXTRACT(HOUR FROM CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
-                    OR (
-                        hour_producer = EXTRACT(HOUR FROM CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
-                        AND minute_producer <= EXTRACT(MINUTE FROM CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
-                    )
-                )
-                ORDER BY complete_hour DESC, minute_producer DESC
-                LIMIT 4
-            )AS dataa
+            SELECT COALESCE(
+                (
+                    SELECT quantitty_producer::double precision
+                    FROM hourly_producer
+                    WHERE date_producer = CAST((CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo') AS DATE)
+                    ORDER BY id DESC
+                    LIMIT 1
+                ),
+                0
+            ) AS solar_power_w
             """,
             cache_key=None,
         )

@@ -15,7 +15,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .api import AggregatedData, RiegEnergyApiClient
 from .const import (
-    CONF_UPDATE_INTERVAL,
     COORDINATOR_RUNTIME_WINDOW,
     DEFAULT_UPDATE_INTERVAL,
     VERSION,
@@ -38,9 +37,7 @@ class RiegEnergyDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER,
             config_entry=entry,
             name="Rieg Energy",
-            update_interval=timedelta(
-                seconds=int(entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL))
-            ),
+            update_interval=timedelta(seconds=DEFAULT_UPDATE_INTERVAL),
         )
         self.api = api
         self.last_sync: datetime | None = None

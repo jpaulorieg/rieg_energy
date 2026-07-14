@@ -59,5 +59,6 @@ Query strategy for FK integrity:
 
 - Connections are pooled.
 - Queries are executed directly against PostgreSQL on every refresh.
+- Refresh interval is fixed at 1 minute.
 - Retries use exponential backoff.
 - Timeouts are enforced on PostgreSQL calls.
