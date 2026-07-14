@@ -58,6 +58,6 @@ Query strategy for FK integrity:
 ## Performance
 
 - Connections are pooled.
-- Queries are cached in memory when appropriate.
+- Queries are executed directly against PostgreSQL on every refresh.
 - Retries use exponential backoff.
 - Timeouts are enforced on PostgreSQL calls.

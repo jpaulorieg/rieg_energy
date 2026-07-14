@@ -9,7 +9,7 @@ from datetime import date, datetime, time, timedelta
 import logging
 from statistics import fmean
 from time import perf_counter
-from typing import Any, Final
+from typing import Any
 
 import psycopg
 from psycopg import AsyncConnection
@@ -36,8 +36,6 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-QUERY_CACHE_TTL: Final = timedelta(minutes=5)
 
 
 class CannotConnect(ConfigEntryError):
@@ -80,7 +78,7 @@ class AggregatedData:
 
 
 class RiegEnergyApiClient:
-    """Thin psycopg3 wrapper with retry, timeout and cache."""
+    """Thin psycopg3 wrapper with retry and timeout."""
 
     def __init__(
         self,
@@ -107,7 +105,6 @@ class RiegEnergyApiClient:
         self.update_interval = update_interval
         self.consumer_unit = consumer_unit
         self._connection: AsyncConnection | None = None
-        self._cache: dict[str, tuple[datetime, Any]] = {}
         self._timings: list[float] = []
         self._query_count = 0
         self._row_count = 0
@@ -198,8 +195,7 @@ class RiegEnergyApiClient:
             self._connection = None
 
     def clear_cache(self) -> None:
-        """Clear in-memory cache."""
-        self._cache.clear()
+        """Compatibility no-op: query cache has been removed."""
 
     def get_runtime_stats(self) -> RuntimeStats:
         """Return runtime stats for diagnostics."""
@@ -230,14 +226,9 @@ class RiegEnergyApiClient:
         query: str,
         *args: Any,
         cache_key: str | None,
-        cache_ttl: timedelta = QUERY_CACHE_TTL,
     ) -> list[dict[str, Any]]:
-        """Execute a query with retry and cache support."""
-        if cache_key:
-            cached = self._cache.get(cache_key)
-            now = dt_util.utcnow()
-            if cached and now - cached[0] < cache_ttl:
-                return cached[1]
+        """Execute a query with retry support."""
+        del cache_key
 
         connection = await self.async_ensure_pool()
         delay = DEFAULT_RETRY_BASE
@@ -251,8 +242,6 @@ class RiegEnergyApiClient:
                     rows = await cursor.fetchall()
                 elapsed = perf_counter() - started
                 self._track_metric(QueryMetric(elapsed=elapsed, rows=len(rows)))
-                if cache_key:
-                    self._cache[cache_key] = (dt_util.utcnow(), rows)
                 return rows
             except (psycopg.Error, TimeoutError) as err:
                 last_err = err
@@ -300,7 +289,7 @@ class RiegEnergyApiClient:
                 LIMIT 4
             )AS dataa
             """,
-            cache_key="hourly_producer_latest",
+            cache_key=None,
         )
         monthly_rows = await self.async_execute(
             """
