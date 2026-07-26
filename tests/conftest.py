@@ -55,6 +55,7 @@ def snapshot_data() -> dict[str, Any]:
             "energy_month": 180.4,
             "energy_year": 1200.0,
             "energy_total": 5400.2,
+            "producer_predict": 15.75,
             "forecast_generation": 14.1,
             "solar_radiation": 500.0,
             "cloud_cover": 20.0,

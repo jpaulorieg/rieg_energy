@@ -81,6 +81,7 @@ class RiegEnergyDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "energy_month": snapshot.energy_month_kwh,
             "energy_year": snapshot.energy_year_kwh,
             "energy_total": snapshot.energy_total_kwh,
+            "producer_predict": snapshot.producer_predict_kw,
             **snapshot.weather,
             **snapshot.bill,
             **snapshot.bill_items,

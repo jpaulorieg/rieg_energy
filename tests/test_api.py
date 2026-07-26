@@ -228,6 +228,7 @@ async def test_async_get_snapshot_filters_latest_bill_by_consumer_unit() -> None
             [{"solar_power_w": 1200.0}],
             [{"observed_on": date(2026, 7, 1), "energy_kwh": 12.0}],
             [{"ghi_total": 510.0}],
+            [{"date_predict": date(2026, 7, 26), "producer_predict": 15.75}],
             [{"id": 10, "total_pagar": 200.0, "referencia": "2026-07", "vencimento": date(2026, 8, 10)}],
             [{"id_fatura": 10, "descricao_item": "Energia TE", "quantidade": 100.0, "valor": 80.0}],
             [{"id_fatura": 10, "grandeza": "Energia ativa consumida", "total_apurado": 300.0, "leitura_anterior": 1000.0, "leitura_atual": 1300.0}],
@@ -241,13 +242,17 @@ async def test_async_get_snapshot_filters_latest_bill_by_consumer_unit() -> None
     assert "COALESCE" in hourly_query
     assert "AS solar_power_w" in hourly_query
 
-    bill_query = client.async_execute.await_args_list[3].args[0]
+    predict_query = client.async_execute.await_args_list[3].args[0]
+    assert "daily_predicts" in predict_query
+    assert "AS producer_predict" in predict_query
+
+    bill_query = client.async_execute.await_args_list[4].args[0]
     assert "unidade_consumidora" in bill_query
 
-    bill_item_query = client.async_execute.await_args_list[4].args[0]
+    bill_item_query = client.async_execute.await_args_list[5].args[0]
     assert "JOIN fatura_item" in bill_item_query
     assert "id_fatura" in bill_item_query
 
-    bill_reading_query = client.async_execute.await_args_list[5].args[0]
+    bill_reading_query = client.async_execute.await_args_list[6].args[0]
     assert "JOIN fatura_leitura" in bill_reading_query
     assert "id_fatura" in bill_reading_query

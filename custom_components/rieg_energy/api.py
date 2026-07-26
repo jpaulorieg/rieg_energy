@@ -70,6 +70,7 @@ class AggregatedData:
     energy_month_kwh: float | None
     energy_year_kwh: float | None
     energy_total_kwh: float | None
+    producer_predict_kw: float | None
     weather: dict[str, Any]
     bill: dict[str, Any]
     bill_items: dict[str, Any]
@@ -303,6 +304,15 @@ class RiegEnergyApiClient:
             """,
             cache_key="solar_weather_latest",
         )
+        predict_rows = await self.async_execute(
+            """
+            SELECT date_predict, CAST(prediction AS decimal(15,2)) AS producer_predict
+            FROM public.daily_predicts
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            cache_key="daily_predicts_latest",
+        )
         bill_cache_suffix = self.consumer_unit or "all"
         if self.consumer_unit:
             bill_query = """
@@ -412,6 +422,11 @@ class RiegEnergyApiClient:
             energy_month_kwh=energy_month,
             energy_year_kwh=energy_year,
             energy_total_kwh=energy_total,
+            producer_predict_kw=(
+                self._find_first_float(predict_rows[0], "producer_predict", "prediction")
+                if predict_rows
+                else None
+            ),
             weather=self._normalize_weather(weather_rows[0]) if weather_rows else {},
             bill=self._normalize_bill(bill_rows[0]) if bill_rows else {},
             bill_items=self._normalize_bill_items(bill_item_rows, bill_rows[0] if bill_rows else None),
