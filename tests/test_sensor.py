@@ -62,3 +62,17 @@ def test_sensor_device_info_uses_predict_device(entry, snapshot_data) -> None:
     }
     assert sensor._attr_device_info["name"] == "predict_device"
     assert sensor.native_value == 15.75
+
+
+def test_meteoblue_sensors_use_predict_device(entry, snapshot_data) -> None:
+    """Test Meteoblue-derived sensors are attached to the predict device."""
+    coordinator = type("Coordinator", (), {"data": snapshot_data})()
+    weather_sensor = next(
+        description for description in SENSORS if description.key == "solar_radiation"
+    )
+    sensor = RiegEnergySensor(coordinator, entry, weather_sensor)
+
+    assert sensor._attr_device_info["identifiers"] == {
+        ("rieg_energy", "test-entry_predict_device")
+    }
+    assert sensor._attr_device_info["name"] == "predict_device"
