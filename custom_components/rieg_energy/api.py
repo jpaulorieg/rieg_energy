@@ -276,13 +276,20 @@ class RiegEnergyApiClient:
                 (
                     SELECT quantitty_producer::double precision
                     FROM hourly_producer
-                    WHERE date_producer = CAST((CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo') AS DATE)
+                    WHERE date_producer = %s
                     ORDER BY id DESC
+                    LIMIT 1
+                ),
+                (
+                    SELECT quantitty_producer::double precision
+                    FROM hourly_producer
+                    ORDER BY date_producer DESC, hour_producer DESC, minute_producer DESC, id DESC
                     LIMIT 1
                 ),
                 0
             ) AS solar_power_w
             """,
+            today,
             cache_key=None,
         )
         monthly_rows = await self.async_execute(

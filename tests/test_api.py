@@ -238,9 +238,13 @@ async def test_async_get_snapshot_filters_latest_bill_by_consumer_unit() -> None
     await client.async_get_snapshot()
 
     hourly_query = client.async_execute.await_args_list[0].args[0]
+    hourly_date_arg = client.async_execute.await_args_list[0].args[1]
     assert "ORDER BY id DESC" in hourly_query
     assert "COALESCE" in hourly_query
     assert "AS solar_power_w" in hourly_query
+    assert "WHERE date_producer = %s" in hourly_query
+    assert "ORDER BY date_producer DESC, hour_producer DESC, minute_producer DESC, id DESC" in hourly_query
+    assert hourly_date_arg == client._local_today()
 
     predict_query = client.async_execute.await_args_list[3].args[0]
     assert "daily_predicts" in predict_query
