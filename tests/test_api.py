@@ -260,3 +260,36 @@ async def test_async_get_snapshot_filters_latest_bill_by_consumer_unit() -> None
     bill_reading_query = client.async_execute.await_args_list[6].args[0]
     assert "JOIN fatura_leitura" in bill_reading_query
     assert "id_fatura" in bill_reading_query
+
+
+async def test_async_get_snapshot_sets_energy_today_to_zero_when_missing_today_row() -> None:
+    """Test energy_today defaults to zero when no monthly row exists for local day."""
+    client = RiegEnergyApiClient(
+        hass=None,  # type: ignore[arg-type]
+        host="localhost",
+        port=5432,
+        database="db",
+        username="user",
+        password="secret",
+        ssl=False,
+        timezone="America/Sao_Paulo",
+        update_interval=300,
+        consumer_unit="UC-001",
+    )
+
+    client.async_execute = AsyncMock(
+        side_effect=[
+            [{"solar_power_w": 1200.0}],
+            [{"observed_on": date(2026, 7, 1), "energy_kwh": 12.0}],
+            [{"ghi_total": 510.0}],
+            [{"date_predict": date(2026, 7, 26), "producer_predict": 15.75}],
+            [{"id": 10, "total_pagar": 200.0, "referencia": "2026-07", "vencimento": date(2026, 8, 10)}],
+            [{"id_fatura": 10, "descricao_item": "Energia TE", "quantidade": 100.0, "valor": 80.0}],
+            [{"id_fatura": 10, "grandeza": "Energia ativa consumida", "total_apurado": 300.0, "leitura_anterior": 1000.0, "leitura_atual": 1300.0}],
+        ]
+    )
+
+    with patch.object(client, "_local_today", return_value=date(2026, 7, 2)):
+        snapshot = await client.async_get_snapshot()
+
+    assert snapshot.energy_today_kwh == 0.0

@@ -413,7 +413,7 @@ class RiegEnergyApiClient:
         monthly = [self._normalize_monthly_row(row) for row in monthly_rows]
         energy_today = next(
             (row["energy_kwh"] for row in monthly if row["observed_on"] == today),
-            None,
+            0.0,
         )
         energy_week = self._sum_rows(monthly, start_of_week)
         energy_month = self._sum_rows(monthly, start_of_month)
