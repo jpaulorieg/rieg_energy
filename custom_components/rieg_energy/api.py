@@ -37,6 +37,18 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Old and new consumer unit codes via the de-para table; takes the code 5 times.
+_UNIT_ALIASES_SQL = """
+    SELECT %s
+    UNION
+    SELECT unidade_consumidora FROM public.unidade_consumidora
+    WHERE unidade_consumidora = %s OR unidade_consumidora_nova = %s
+    UNION
+    SELECT unidade_consumidora_nova FROM public.unidade_consumidora
+    WHERE unidade_consumidora = %s OR unidade_consumidora_nova = %s
+"""
+_UNIT_ALIASES_PARAMS = 5
+
 
 class CannotConnect(ConfigEntryError):
     """Error to indicate we cannot connect."""
@@ -172,9 +184,20 @@ class RiegEnergyApiClient:
         try:
             rows = await client.async_execute(
                 """
-                SELECT DISTINCT unidade_consumidora
-                FROM fatura
-                WHERE unidade_consumidora IS NOT NULL
+                SELECT DISTINCT unit AS unidade_consumidora FROM (
+                    SELECT unidade_consumidora AS unit FROM fatura
+                    UNION
+                    SELECT m.unidade_consumidora
+                    FROM public.unidade_consumidora m
+                    JOIN fatura f ON f.unidade_consumidora IN (
+                        m.unidade_consumidora, m.unidade_consumidora_nova)
+                    UNION
+                    SELECT m.unidade_consumidora_nova
+                    FROM public.unidade_consumidora m
+                    JOIN fatura f ON f.unidade_consumidora IN (
+                        m.unidade_consumidora, m.unidade_consumidora_nova)
+                ) units
+                WHERE unit IS NOT NULL
                 ORDER BY unidade_consumidora ASC
                 """,
                 cache_key=None,
@@ -325,16 +348,16 @@ class RiegEnergyApiClient:
             bill_query = """
                 SELECT *
                 FROM fatura
-                WHERE unidade_consumidora = %s
+                WHERE unidade_consumidora IN (""" + _UNIT_ALIASES_SQL + """)
                 ORDER BY 1 DESC
                 LIMIT 1
             """
-            bill_args: tuple[Any, ...] = (self.consumer_unit,)
+            bill_args: tuple[Any, ...] = (self.consumer_unit,) * _UNIT_ALIASES_PARAMS
             bill_item_query = """
                 WITH latest_bill AS (
                     SELECT id
                     FROM fatura
-                    WHERE unidade_consumidora = %s
+                    WHERE unidade_consumidora IN (""" + _UNIT_ALIASES_SQL + """)
                     ORDER BY id DESC
                     LIMIT 1
                 )
@@ -343,12 +366,12 @@ class RiegEnergyApiClient:
                 JOIN fatura_item fi ON fi.id_fatura = lb.id
                 ORDER BY fi.id DESC
             """
-            bill_item_args: tuple[Any, ...] = (self.consumer_unit,)
+            bill_item_args: tuple[Any, ...] = (self.consumer_unit,) * _UNIT_ALIASES_PARAMS
             bill_reading_query = """
                 WITH latest_bill AS (
                     SELECT id
                     FROM fatura
-                    WHERE unidade_consumidora = %s
+                    WHERE unidade_consumidora IN (""" + _UNIT_ALIASES_SQL + """)
                     ORDER BY id DESC
                     LIMIT 1
                 )
@@ -357,7 +380,7 @@ class RiegEnergyApiClient:
                 JOIN fatura_leitura fl ON fl.id_fatura = lb.id
                 ORDER BY fl.id DESC
             """
-            bill_reading_args: tuple[Any, ...] = (self.consumer_unit,)
+            bill_reading_args: tuple[Any, ...] = (self.consumer_unit,) * _UNIT_ALIASES_PARAMS
         else:
             # Backward compatibility for old entries created before consumer_unit became mandatory.
             bill_query = """
